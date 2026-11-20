@@ -1,0 +1,309 @@
+{
+  "entities": {
+    "MemberProfile": {
+      "title": "MemberProfile",
+      "description": "콘텐츠제작학과 회원의 공개 프로필 정보 (PII 제외)",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "nickname": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "grade": { "type": "string", "enum": ["1학년", "2학년", "3학년", "4학년", "졸업/대학원"] },
+        "majorTrack": { "type": "string", "enum": ["영상제작·연출", "콘텐츠기획·마케팅", "3D·모션그래픽", "디자인·UI/UX", "사운드·포스트"] },
+        "tools": { "type": "array" },
+        "bio": { "type": "string", "maxLength": 300 },
+        "avatarUrl": { "type": "string", "maxLength": 500 },
+        "isPublic": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "nickname", "grade", "majorTrack", "tools", "bio", "avatarUrl", "isPublic", "createdAt", "updatedAt"]
+    },
+    "UserPrivate": {
+      "title": "UserPrivate",
+      "description": "회원의 민감 개인정보 (이메일, 학번)",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "minLength": 3, "maxLength": 120 },
+        "studentNumber": { "type": "string", "minLength": 2, "maxLength": 20 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "studentNumber", "createdAt", "updatedAt"]
+    },
+    "Contest": {
+      "title": "Contest",
+      "description": "교내 및 교외 공모전 홍보 게시글",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "scope": { "type": "string", "enum": ["교내", "교외"] },
+        "category": { "type": "string", "enum": ["영상·영화", "기획·마케팅", "디자인·웹", "3D·모션", "사운드"] },
+        "organizer": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "deadline": { "type": "string", "minLength": 10, "maxLength": 10, "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "prize": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "summary": { "type": "string", "minLength": 2, "maxLength": 240 },
+        "description": { "type": "string", "minLength": 2, "maxLength": 3000 },
+        "externalUrl": { "type": "string", "maxLength": 500 },
+        "imageUrl": { "type": "string", "maxLength": 500 },
+        "authorId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "authorName": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "isPublished": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "scope", "category", "organizer", "deadline", "prize", "summary", "description", "externalUrl", "imageUrl", "authorId", "authorName", "isPublished", "createdAt", "updatedAt"]
+    },
+    "ClubPost": {
+      "title": "ClubPost",
+      "description": "학과 및 교내 동아리 모집 게시글",
+      "type": "object",
+      "properties": {
+        "clubName": { "type": "string", "minLength": 1, "maxLength": 60 },
+        "title": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "field": { "type": "string", "enum": ["영상제작", "시나리오·기획", "모션·3D", "사진·스튜디오", "뉴미디어·웹"] },
+        "status": { "type": "string", "enum": ["모집중", "상시모집", "마감"] },
+        "recruitCount": { "type": "string", "minLength": 1, "maxLength": 30 },
+        "schedule": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "contactInfo": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "description": { "type": "string", "minLength": 2, "maxLength": 3000 },
+        "imageUrl": { "type": "string", "maxLength": 500 },
+        "authorId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "authorName": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "isPublished": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["clubName", "title", "field", "status", "recruitCount", "schedule", "contactInfo", "description", "imageUrl", "authorId", "authorName", "isPublished", "createdAt", "updatedAt"]
+    },
+    "ParentComment": {
+      "title": "ParentComment",
+      "description": "게시글 하위 댓글",
+      "type": "object",
+      "properties": {
+        "parentId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "authorId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "authorName": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "authorTrack": { "type": "string", "maxLength": 40 },
+        "content": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "isPublished": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["parentId", "authorId", "authorName", "authorTrack", "content", "isPublished", "createdAt"]
+    },
+    "StudyTip": {
+      "title": "StudyTip",
+      "description": "전공 강의·과제 팁 및 스터디 정보 게시글",
+      "type": "object",
+      "properties": {
+        "courseName": { "type": "string", "minLength": 1, "maxLength": 60 },
+        "tipType": { "type": "string", "enum": ["강의팁", "과제노하우", "스터디모집"] },
+        "title": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "content": { "type": "string", "minLength": 2, "maxLength": 3000 },
+        "authorId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "authorName": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "authorTrack": { "type": "string", "maxLength": 40 },
+        "isPublished": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["courseName", "tipType", "title", "content", "authorId", "authorName", "authorTrack", "isPublished", "createdAt", "updatedAt"]
+    },
+    "TeamRecruit": {
+      "title": "TeamRecruit",
+      "description": "공모전 팀원 구하기 및 스터디 매칭 공고",
+      "type": "object",
+      "properties": {
+        "projectTitle": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "contestName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "neededRoles": { "type": "array" },
+        "currentMembers": { "type": "integer" },
+        "targetMembers": { "type": "integer" },
+        "status": { "type": "string", "enum": ["모집중", "마감"] },
+        "description": { "type": "string", "minLength": 2, "maxLength": 2000 },
+        "contactNote": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "authorId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "authorName": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "isPublished": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["projectTitle", "contestName", "neededRoles", "currentMembers", "targetMembers", "status", "description", "contactNote", "authorId", "authorName", "isPublished", "createdAt", "updatedAt"]
+    },
+    "PortfolioWork": {
+      "title": "PortfolioWork",
+      "description": "학생 포트폴리오 및 작업물 피드백 아카이브",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "track": { "type": "string", "enum": ["영상·영화", "모션·3D", "기획서·디자인", "사운드", "웹·인터랙티브"] },
+        "toolsUsed": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "imageUrl": { "type": "string", "maxLength": 500 },
+        "mediaLink": { "type": "string", "maxLength": 500 },
+        "description": { "type": "string", "minLength": 2, "maxLength": 2000 },
+        "authorId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "authorName": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "authorGrade": { "type": "string", "maxLength": 20 },
+        "isPublished": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "track", "toolsUsed", "imageUrl", "mediaLink", "description", "authorId", "authorName", "authorGrade", "isPublished", "createdAt", "updatedAt"]
+    },
+    "EquipGuide": {
+      "title": "EquipGuide",
+      "description": "교내 장비 대여 및 소프트웨어 활용 가이드 위키",
+      "type": "object",
+      "properties": {
+        "guideType": { "type": "string", "enum": ["교내장비", "소프트웨어"] },
+        "itemName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "locationOrShortcut": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "summary": { "type": "string", "minLength": 2, "maxLength": 240 },
+        "guideBody": { "type": "string", "minLength": 2, "maxLength": 4000 },
+        "authorId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "authorName": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "isPublished": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["guideType", "itemName", "locationOrShortcut", "summary", "guideBody", "authorId", "authorName", "isPublished", "createdAt", "updatedAt"]
+    },
+    "CommunityPost": {
+      "title": "CommunityPost",
+      "description": "학과 자유 및 질문 커뮤니티 게시글",
+      "type": "object",
+      "properties": {
+        "category": { "type": "string", "enum": ["자유", "질문Q&A", "정보공유", "장비·툴"] },
+        "title": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "content": { "type": "string", "minLength": 2, "maxLength": 3000 },
+        "authorId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "authorName": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "authorTrack": { "type": "string", "maxLength": 40 },
+        "isPublished": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["category", "title", "content", "authorId", "authorName", "authorTrack", "isPublished", "createdAt", "updatedAt"]
+    },
+    "Bookmark": {
+      "title": "Bookmark",
+      "description": "사용자별 공모전 북마크",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "contestId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "contestId", "createdAt"]
+    },
+    "DepartmentNews": {
+      "title": "DepartmentNews",
+      "description": "콘텐츠제작학과 공지, 특강, 전시·상영회, 장학 등 학과 관련 소식",
+      "type": "object",
+      "properties": {
+        "newsType": { "type": "string", "enum": ["학과공지", "특강·세미나", "전시·상영회", "장학·취업"] },
+        "title": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "summary": { "type": "string", "minLength": 2, "maxLength": 240 },
+        "content": { "type": "string", "minLength": 2, "maxLength": 3000 },
+        "eventSchedule": { "type": "string", "maxLength": 80 },
+        "source": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "isPinned": { "type": "boolean" },
+        "authorId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "authorName": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "isPublished": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["newsType", "title", "summary", "content", "eventSchedule", "source", "isPinned", "authorId", "authorName", "isPublished", "createdAt", "updatedAt"]
+    },
+    "CommunityReport": {
+      "title": "CommunityReport",
+      "description": "커뮤니티 게시글 및 댓글의 도배·육두문자·유해 콘텐츠 신고 내역",
+      "type": "object",
+      "properties": {
+        "reporterId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "reporterName": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "targetType": { "type": "string", "enum": ["post", "comment"] },
+        "targetCollection": { "type": "string", "enum": ["communityPosts", "clubs", "teamRecruits", "portfolioWorks"] },
+        "targetId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "parentId": { "type": "string", "maxLength": 128 },
+        "targetAuthorId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "targetAuthorName": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "targetPreview": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "reason": { "type": "string", "enum": ["도배·스팸홍보", "욕설·비하·혐오표현", "허위정보·사기", "개인정보노출·부적절콘텐츠"] },
+        "reasonDetail": { "type": "string", "maxLength": 500 },
+        "status": { "type": "string", "enum": ["접수됨", "검토중", "조치완료", "반려됨"] },
+        "adminNote": { "type": "string", "maxLength": 300 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["reporterId", "reporterName", "targetType", "targetCollection", "targetId", "parentId", "targetAuthorId", "targetAuthorName", "targetPreview", "reason", "reasonDetail", "status", "adminNote", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/memberProfiles/{userId}": {
+      "schema": { "$ref": "#/entities/MemberProfile" },
+      "description": "공개 학과 회원 프로필"
+    },
+    "/usersPrivate/{userId}": {
+      "schema": { "$ref": "#/entities/UserPrivate" },
+      "description": "비공개 개인정보(이메일, 학번)"
+    },
+    "/contests/{contestId}": {
+      "schema": { "$ref": "#/entities/Contest" },
+      "description": "교내외 공모전 홍보 목록"
+    },
+    "/clubs/{clubId}": {
+      "schema": { "$ref": "#/entities/ClubPost" },
+      "description": "동아리 모집 공고"
+    },
+    "/clubs/{clubId}/comments/{commentId}": {
+      "schema": { "$ref": "#/entities/ParentComment" },
+      "description": "동아리 모집 게시글 댓글"
+    },
+    "/studyTips/{tipId}": {
+      "schema": { "$ref": "#/entities/StudyTip" },
+      "description": "전공 강의 및 과제 팁"
+    },
+    "/teamRecruits/{recruitId}": {
+      "schema": { "$ref": "#/entities/TeamRecruit" },
+      "description": "공모전 팀원 매칭 보드"
+    },
+    "/teamRecruits/{recruitId}/comments/{commentId}": {
+      "schema": { "$ref": "#/entities/ParentComment" },
+      "description": "팀원 매칭 지원 및 질문 댓글"
+    },
+    "/portfolioWorks/{workId}": {
+      "schema": { "$ref": "#/entities/PortfolioWork" },
+      "description": "학생 포트폴리오 피드백 갤러리"
+    },
+    "/portfolioWorks/{workId}/comments/{commentId}": {
+      "schema": { "$ref": "#/entities/ParentComment" },
+      "description": "포트폴리오 피드백 댓글"
+    },
+    "/equipGuides/{guideId}": {
+      "schema": { "$ref": "#/entities/EquipGuide" },
+      "description": "교내 장비 및 소프트웨어 가이드 위키"
+    },
+    "/communityPosts/{postId}": {
+      "schema": { "$ref": "#/entities/CommunityPost" },
+      "description": "학과 커뮤니티 게시판"
+    },
+    "/communityPosts/{postId}/comments/{commentId}": {
+      "schema": { "$ref": "#/entities/ParentComment" },
+      "description": "커뮤니티 게시글 댓글"
+    },
+    "/bookmarks/{bookmarkId}": {
+      "schema": { "$ref": "#/entities/Bookmark" },
+      "description": "사용자 공모전 북마크"
+    },
+    "/departmentNews/{newsId}": {
+      "schema": { "$ref": "#/entities/DepartmentNews" },
+      "description": "학과 관련 공지, 특강, 상영회, 장학 소식"
+    },
+    "/reports/{reportId}": {
+      "schema": { "$ref": "#/entities/CommunityReport" },
+      "description": "도배·육두문자·유해 콘텐츠 신고 접수 및 관리자 조치 로그"
+    }
+  }
+}

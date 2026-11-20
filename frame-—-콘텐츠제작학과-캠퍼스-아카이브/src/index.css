@@ -1,0 +1,54 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    --bg-canvas: #FBF9F5;
+    --bg-surface: #F2EDE4;
+    --bg-card: #FFFFFF;
+    --ink-primary: #1C1917;
+    --ink-secondary: #57534E;
+    --ink-muted: #78716C;
+    --border-hairline: #E5DEC9;
+    --accent-lapis: #1E3A8A;
+    --accent-amber: #B45309;
+    color-scheme: light;
+  }
+
+  .dark {
+    --bg-canvas: #121110;
+    --bg-surface: #1B1917;
+    --bg-card: #221F1C;
+    --ink-primary: #F5F2EB;
+    --ink-secondary: #B8B0A4;
+    --ink-muted: #8E867B;
+    --border-hairline: #322E29;
+    --accent-lapis: #93B4FF;
+    --accent-amber: #FBBF24;
+    color-scheme: dark;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    font-family: 'Plus Jakarta Sans', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+    background-color: var(--bg-canvas);
+    color: var(--ink-primary);
+  }
+}
+
+.font-editorial {
+  font-family: 'Fraunces', 'Noto Serif KR', Georgia, serif;
+}
+
+.font-brand {
+  font-family: 'Do Hyeon', 'Plus Jakarta Sans', 'Noto Sans KR', sans-serif;
+}
+
+.font-mono-tabular {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.headline-balance {
+  text-wrap: balance;
+}

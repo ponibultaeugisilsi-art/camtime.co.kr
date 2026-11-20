@@ -1,0 +1,577 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Default-Deny Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Hardened Global Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isSignedIn() && existing().authorId == request.auth.uid;
+    }
+
+    function isBootstrappedAdmin() {
+      return isSignedIn() && isVerified() && request.auth.token.email == 'ponibultaeugisilsi@gmail.com';
+    }
+
+    function isAdmin() {
+      return isBootstrappedAdmin() || (
+        isSignedIn() && isVerified() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function affectedKeys() {
+      return incoming().diff(existing()).affectedKeys();
+    }
+
+    function isNonEmptyString(val, minLen, maxLen) {
+      return val is string && val.size() >= minLen && val.size() <= maxLen;
+    }
+
+    function isOptionalString(val, maxLen) {
+      return val is string && val.size() <= maxLen;
+    }
+
+    // 3. Entity Validation Blueprints
+    function isValidMemberProfile(data, userId) {
+      return data.keys().hasAll(['uid', 'nickname', 'grade', 'majorTrack', 'tools', 'bio', 'avatarUrl', 'isPublic', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'nickname', 'grade', 'majorTrack', 'tools', 'bio', 'avatarUrl', 'isPublic', 'createdAt', 'updatedAt'])
+        && data.uid == userId
+        && isValidId(data.uid)
+        && isNonEmptyString(data.nickname, 1, 40)
+        && data.grade in ['1학년', '2학년', '3학년', '4학년', '졸업/대학원']
+        && data.majorTrack in ['영상제작·연출', '콘텐츠기획·마케팅', '3D·모션그래픽', '디자인·UI/UX', '사운드·포스트']
+        && data.tools is list
+        && data.tools.size() <= 8
+        && (data.tools.size() == 0 || (data.tools[0] is string && data.tools[0].size() <= 40))
+        && isOptionalString(data.bio, 300)
+        && isOptionalString(data.avatarUrl, 500)
+        && data.isPublic == true
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidUserPrivate(data, userId) {
+      return data.keys().hasAll(['uid', 'email', 'studentNumber', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'email', 'studentNumber', 'createdAt', 'updatedAt'])
+        && data.uid == userId
+        && isValidId(data.uid)
+        && isNonEmptyString(data.email, 3, 120)
+        && isNonEmptyString(data.studentNumber, 2, 20)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidContest(data) {
+      return data.keys().hasAll(['title', 'scope', 'category', 'organizer', 'deadline', 'prize', 'summary', 'description', 'externalUrl', 'imageUrl', 'authorId', 'authorName', 'isPublished', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['title', 'scope', 'category', 'organizer', 'deadline', 'prize', 'summary', 'description', 'externalUrl', 'imageUrl', 'authorId', 'authorName', 'isPublished', 'createdAt', 'updatedAt'])
+        && isNonEmptyString(data.title, 2, 120)
+        && data.scope in ['교내', '교외']
+        && data.category in ['영상·영화', '기획·마케팅', '디자인·웹', '3D·모션', '사운드']
+        && isNonEmptyString(data.organizer, 1, 80)
+        && data.deadline is string && data.deadline.size() == 10 && data.deadline.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && isNonEmptyString(data.prize, 1, 100)
+        && isNonEmptyString(data.summary, 2, 240)
+        && isNonEmptyString(data.description, 2, 3000)
+        && isOptionalString(data.externalUrl, 500)
+        && isOptionalString(data.imageUrl, 500)
+        && isValidId(data.authorId)
+        && isNonEmptyString(data.authorName, 1, 40)
+        && data.isPublished == true
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidClubPost(data) {
+      return data.keys().hasAll(['clubName', 'title', 'field', 'status', 'recruitCount', 'schedule', 'contactInfo', 'description', 'imageUrl', 'authorId', 'authorName', 'isPublished', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['clubName', 'title', 'field', 'status', 'recruitCount', 'schedule', 'contactInfo', 'description', 'imageUrl', 'authorId', 'authorName', 'isPublished', 'createdAt', 'updatedAt'])
+        && isNonEmptyString(data.clubName, 1, 60)
+        && isNonEmptyString(data.title, 2, 120)
+        && data.field in ['영상제작', '시나리오·기획', '모션·3D', '사진·스튜디오', '뉴미디어·웹']
+        && data.status in ['모집중', '상시모집', '마감']
+        && isNonEmptyString(data.recruitCount, 1, 30)
+        && isNonEmptyString(data.schedule, 1, 80)
+        && isNonEmptyString(data.contactInfo, 1, 200)
+        && isNonEmptyString(data.description, 2, 3000)
+        && isOptionalString(data.imageUrl, 500)
+        && isValidId(data.authorId)
+        && isNonEmptyString(data.authorName, 1, 40)
+        && data.isPublished == true
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidComment(data, parentId) {
+      return data.keys().hasAll(['parentId', 'authorId', 'authorName', 'authorTrack', 'content', 'isPublished', 'createdAt'])
+        && data.keys().hasOnly(['parentId', 'authorId', 'authorName', 'authorTrack', 'content', 'isPublished', 'createdAt'])
+        && data.parentId == parentId
+        && isValidId(data.parentId)
+        && isValidId(data.authorId)
+        && data.authorId == request.auth.uid
+        && isNonEmptyString(data.authorName, 1, 40)
+        && isOptionalString(data.authorTrack, 40)
+        && isNonEmptyString(data.content, 1, 1000)
+        && data.isPublished == true
+        && data.createdAt is timestamp;
+    }
+
+    function isValidStudyTip(data) {
+      return data.keys().hasAll(['courseName', 'tipType', 'title', 'content', 'authorId', 'authorName', 'authorTrack', 'isPublished', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['courseName', 'tipType', 'title', 'content', 'authorId', 'authorName', 'authorTrack', 'isPublished', 'createdAt', 'updatedAt'])
+        && isNonEmptyString(data.courseName, 1, 60)
+        && data.tipType in ['강의팁', '과제노하우', '스터디모집']
+        && isNonEmptyString(data.title, 2, 120)
+        && isNonEmptyString(data.content, 2, 3000)
+        && isValidId(data.authorId)
+        && isNonEmptyString(data.authorName, 1, 40)
+        && isOptionalString(data.authorTrack, 40)
+        && data.isPublished == true
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidTeamRecruit(data) {
+      return data.keys().hasAll(['projectTitle', 'contestName', 'neededRoles', 'currentMembers', 'targetMembers', 'status', 'description', 'contactNote', 'authorId', 'authorName', 'isPublished', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['projectTitle', 'contestName', 'neededRoles', 'currentMembers', 'targetMembers', 'status', 'description', 'contactNote', 'authorId', 'authorName', 'isPublished', 'createdAt', 'updatedAt'])
+        && isNonEmptyString(data.projectTitle, 2, 120)
+        && isNonEmptyString(data.contestName, 1, 120)
+        && data.neededRoles is list
+        && data.neededRoles.size() >= 1
+        && data.neededRoles.size() <= 6
+        && data.neededRoles[0] is string
+        && data.neededRoles[0].size() <= 40
+        && data.currentMembers is int && data.currentMembers >= 1 && data.currentMembers <= 20
+        && data.targetMembers is int && data.targetMembers >= 2 && data.targetMembers <= 20
+        && data.status in ['모집중', '마감']
+        && isNonEmptyString(data.description, 2, 2000)
+        && isNonEmptyString(data.contactNote, 1, 200)
+        && isValidId(data.authorId)
+        && isNonEmptyString(data.authorName, 1, 40)
+        && data.isPublished == true
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidPortfolioWork(data) {
+      return data.keys().hasAll(['title', 'track', 'toolsUsed', 'imageUrl', 'mediaLink', 'description', 'authorId', 'authorName', 'authorGrade', 'isPublished', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['title', 'track', 'toolsUsed', 'imageUrl', 'mediaLink', 'description', 'authorId', 'authorName', 'authorGrade', 'isPublished', 'createdAt', 'updatedAt'])
+        && isNonEmptyString(data.title, 2, 100)
+        && data.track in ['영상·영화', '모션·3D', '기획서·디자인', '사운드', '웹·인터랙티브']
+        && isNonEmptyString(data.toolsUsed, 1, 120)
+        && isOptionalString(data.imageUrl, 500)
+        && isOptionalString(data.mediaLink, 500)
+        && isNonEmptyString(data.description, 2, 2000)
+        && isValidId(data.authorId)
+        && isNonEmptyString(data.authorName, 1, 40)
+        && isOptionalString(data.authorGrade, 20)
+        && data.isPublished == true
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidEquipGuide(data) {
+      return data.keys().hasAll(['guideType', 'itemName', 'locationOrShortcut', 'summary', 'guideBody', 'authorId', 'authorName', 'isPublished', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['guideType', 'itemName', 'locationOrShortcut', 'summary', 'guideBody', 'authorId', 'authorName', 'isPublished', 'createdAt', 'updatedAt'])
+        && data.guideType in ['교내장비', '소프트웨어']
+        && isNonEmptyString(data.itemName, 1, 80)
+        && isNonEmptyString(data.locationOrShortcut, 1, 120)
+        && isNonEmptyString(data.summary, 2, 240)
+        && isNonEmptyString(data.guideBody, 2, 4000)
+        && isValidId(data.authorId)
+        && isNonEmptyString(data.authorName, 1, 40)
+        && data.isPublished == true
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidCommunityPost(data) {
+      return data.keys().hasAll(['category', 'title', 'content', 'authorId', 'authorName', 'authorTrack', 'isPublished', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['category', 'title', 'content', 'authorId', 'authorName', 'authorTrack', 'isPublished', 'createdAt', 'updatedAt'])
+        && data.category in ['자유', '질문Q&A', '정보공유', '장비·툴']
+        && isNonEmptyString(data.title, 2, 120)
+        && isNonEmptyString(data.content, 2, 3000)
+        && isValidId(data.authorId)
+        && isNonEmptyString(data.authorName, 1, 40)
+        && isOptionalString(data.authorTrack, 40)
+        && data.isPublished == true
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidBookmark(data) {
+      return data.keys().hasAll(['userId', 'contestId', 'createdAt'])
+        && data.keys().hasOnly(['userId', 'contestId', 'createdAt'])
+        && isValidId(data.userId)
+        && data.userId == request.auth.uid
+        && isValidId(data.contestId)
+        && data.createdAt is timestamp;
+    }
+
+    function isValidDepartmentNews(data) {
+      return data.keys().hasAll(['newsType', 'title', 'summary', 'content', 'eventSchedule', 'source', 'isPinned', 'authorId', 'authorName', 'isPublished', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['newsType', 'title', 'summary', 'content', 'eventSchedule', 'source', 'isPinned', 'authorId', 'authorName', 'isPublished', 'createdAt', 'updatedAt'])
+        && data.newsType in ['학과공지', '특강·세미나', '전시·상영회', '장학·취업']
+        && isNonEmptyString(data.title, 2, 120)
+        && isNonEmptyString(data.summary, 2, 240)
+        && isNonEmptyString(data.content, 2, 3000)
+        && isOptionalString(data.eventSchedule, 80)
+        && isNonEmptyString(data.source, 1, 80)
+        && data.isPinned is bool
+        && isValidId(data.authorId)
+        && isNonEmptyString(data.authorName, 1, 40)
+        && data.isPublished == true
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidReport(data) {
+      return data.keys().hasAll([
+          'reporterId', 'reporterName', 'targetType', 'targetCollection', 'targetId', 'parentId',
+          'targetAuthorId', 'targetAuthorName', 'targetPreview', 'reason', 'reasonDetail',
+          'status', 'adminNote', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'reporterId', 'reporterName', 'targetType', 'targetCollection', 'targetId', 'parentId',
+          'targetAuthorId', 'targetAuthorName', 'targetPreview', 'reason', 'reasonDetail',
+          'status', 'adminNote', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.reporterId)
+        && isNonEmptyString(data.reporterName, 1, 40)
+        && data.targetType in ['post', 'comment']
+        && data.targetCollection in ['communityPosts', 'clubs', 'teamRecruits', 'portfolioWorks']
+        && isValidId(data.targetId)
+        && (data.parentId == '' || isValidId(data.parentId))
+        && isValidId(data.targetAuthorId)
+        && isNonEmptyString(data.targetAuthorName, 1, 40)
+        && isNonEmptyString(data.targetPreview, 1, 200)
+        && data.reason in ['도배·스팸홍보', '욕설·비하·혐오표현', '허위정보·사기', '개인정보노출·부적절콘텐츠']
+        && isOptionalString(data.reasonDetail, 500)
+        && data.status in ['접수됨', '검토중', '조치완료', '반려됨']
+        && isOptionalString(data.adminNote, 300)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // 4. Collection Rules
+    match /admins/{adminId} {
+      allow get: if isOwner(adminId);
+      allow list, write: if false;
+    }
+
+    match /memberProfiles/{userId} {
+      allow get: if isValidId(userId) && resource.data.isPublic == true;
+      allow list: if resource.data.isPublic == true;
+      allow create: if isSignedIn() && isVerified() && isOwner(userId) && isValidId(userId)
+        && isValidMemberProfile(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isSignedIn() && isVerified() && (isOwner(userId) || isAdmin()) && isValidId(userId)
+        && isValidMemberProfile(incoming(), userId)
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && affectedKeys().hasOnly(['nickname', 'grade', 'majorTrack', 'tools', 'bio', 'avatarUrl', 'updatedAt']);
+      allow delete: if isAdmin() && isValidId(userId);
+    }
+
+    match /usersPrivate/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if false;
+      allow create: if isSignedIn() && isVerified() && isOwner(userId) && isValidId(userId)
+        && isValidUserPrivate(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isSignedIn() && isVerified() && isOwner(userId) && isValidId(userId)
+        && isValidUserPrivate(incoming(), userId)
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && affectedKeys().hasOnly(['email', 'studentNumber', 'updatedAt']);
+      allow delete: if false;
+    }
+
+    match /contests/{contestId} {
+      allow get: if isValidId(contestId) && resource.data.isPublished == true;
+      allow list: if resource.data.isPublished == true;
+      allow create: if isSignedIn() && isVerified() && isValidId(contestId)
+        && isValidContest(incoming())
+        && incoming().authorId == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isSignedIn() && isVerified() && isValidId(contestId)
+        && isValidContest(incoming())
+        && (isDocOwner() || isAdmin())
+        && incoming().authorId == existing().authorId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && affectedKeys().hasOnly(['title', 'scope', 'category', 'organizer', 'deadline', 'prize', 'summary', 'description', 'externalUrl', 'imageUrl', 'updatedAt']);
+      allow delete: if isSignedIn() && isVerified() && isValidId(contestId) && (isDocOwner() || isAdmin());
+    }
+
+    match /clubs/{clubId} {
+      allow get: if isValidId(clubId) && resource.data.isPublished == true;
+      allow list: if resource.data.isPublished == true;
+      allow create: if isSignedIn() && isVerified() && isValidId(clubId)
+        && isValidClubPost(incoming())
+        && incoming().authorId == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isSignedIn() && isVerified() && isValidId(clubId)
+        && isValidClubPost(incoming())
+        && (isDocOwner() || isAdmin())
+        && incoming().authorId == existing().authorId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && affectedKeys().hasOnly(['clubName', 'title', 'field', 'status', 'recruitCount', 'schedule', 'contactInfo', 'description', 'imageUrl', 'updatedAt']);
+      allow delete: if isSignedIn() && isVerified() && isValidId(clubId) && (isDocOwner() || isAdmin());
+
+      match /comments/{commentId} {
+        allow get: if isValidId(clubId) && isValidId(commentId) && resource.data.isPublished == true;
+        allow list: if resource.data.isPublished == true;
+        allow create: if isSignedIn() && isVerified() && isValidId(clubId) && isValidId(commentId)
+          && isValidComment(incoming(), clubId)
+          && incoming().createdAt == request.time
+          && exists(/databases/$(database)/documents/clubs/$(clubId));
+        allow update: if false;
+        allow delete: if isSignedIn() && isVerified() && isValidId(clubId) && isValidId(commentId) && (isDocOwner() || isAdmin());
+      }
+    }
+
+    match /studyTips/{tipId} {
+      allow get: if isValidId(tipId) && resource.data.isPublished == true;
+      allow list: if resource.data.isPublished == true;
+      allow create: if isSignedIn() && isVerified() && isValidId(tipId)
+        && isValidStudyTip(incoming())
+        && incoming().authorId == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isSignedIn() && isVerified() && isValidId(tipId)
+        && isValidStudyTip(incoming())
+        && (isDocOwner() || isAdmin())
+        && incoming().authorId == existing().authorId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && affectedKeys().hasOnly(['courseName', 'tipType', 'title', 'content', 'updatedAt']);
+      allow delete: if isSignedIn() && isVerified() && isValidId(tipId) && (isDocOwner() || isAdmin());
+    }
+
+    match /teamRecruits/{recruitId} {
+      allow get: if isValidId(recruitId) && resource.data.isPublished == true;
+      allow list: if resource.data.isPublished == true;
+      allow create: if isSignedIn() && isVerified() && isValidId(recruitId)
+        && isValidTeamRecruit(incoming())
+        && incoming().authorId == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isSignedIn() && isVerified() && isValidId(recruitId)
+        && isValidTeamRecruit(incoming())
+        && (
+          isAdmin() || (
+            isDocOwner()
+            && existing().status != '마감'
+          )
+        )
+        && incoming().authorId == existing().authorId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && affectedKeys().hasOnly(['projectTitle', 'contestName', 'neededRoles', 'currentMembers', 'targetMembers', 'status', 'description', 'contactNote', 'updatedAt']);
+      allow delete: if isSignedIn() && isVerified() && isValidId(recruitId) && (isDocOwner() || isAdmin());
+
+      match /comments/{commentId} {
+        allow get: if isValidId(recruitId) && isValidId(commentId) && resource.data.isPublished == true;
+        allow list: if resource.data.isPublished == true;
+        allow create: if isSignedIn() && isVerified() && isValidId(recruitId) && isValidId(commentId)
+          && isValidComment(incoming(), recruitId)
+          && incoming().createdAt == request.time
+          && exists(/databases/$(database)/documents/teamRecruits/$(recruitId));
+        allow update: if false;
+        allow delete: if isSignedIn() && isVerified() && isValidId(recruitId) && isValidId(commentId) && (isDocOwner() || isAdmin());
+      }
+    }
+
+    match /portfolioWorks/{workId} {
+      allow get: if isValidId(workId) && resource.data.isPublished == true;
+      allow list: if resource.data.isPublished == true;
+      allow create: if isSignedIn() && isVerified() && isValidId(workId)
+        && isValidPortfolioWork(incoming())
+        && incoming().authorId == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isSignedIn() && isVerified() && isValidId(workId)
+        && isValidPortfolioWork(incoming())
+        && (isDocOwner() || isAdmin())
+        && incoming().authorId == existing().authorId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && affectedKeys().hasOnly(['title', 'track', 'toolsUsed', 'imageUrl', 'mediaLink', 'description', 'updatedAt']);
+      allow delete: if isSignedIn() && isVerified() && isValidId(workId) && (isDocOwner() || isAdmin());
+
+      match /comments/{commentId} {
+        allow get: if isValidId(workId) && isValidId(commentId) && resource.data.isPublished == true;
+        allow list: if resource.data.isPublished == true;
+        allow create: if isSignedIn() && isVerified() && isValidId(workId) && isValidId(commentId)
+          && isValidComment(incoming(), workId)
+          && incoming().createdAt == request.time
+          && exists(/databases/$(database)/documents/portfolioWorks/$(workId));
+        allow update: if false;
+        allow delete: if isSignedIn() && isVerified() && isValidId(workId) && isValidId(commentId) && (isDocOwner() || isAdmin());
+      }
+    }
+
+    match /equipGuides/{guideId} {
+      allow get: if isValidId(guideId) && resource.data.isPublished == true;
+      allow list: if resource.data.isPublished == true;
+      allow create: if isSignedIn() && isVerified() && isValidId(guideId)
+        && isValidEquipGuide(incoming())
+        && incoming().authorId == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isSignedIn() && isVerified() && isValidId(guideId)
+        && isValidEquipGuide(incoming())
+        && (isDocOwner() || isAdmin())
+        && incoming().authorId == existing().authorId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && affectedKeys().hasOnly(['guideType', 'itemName', 'locationOrShortcut', 'summary', 'guideBody', 'updatedAt']);
+      allow delete: if isSignedIn() && isVerified() && isValidId(guideId) && (isDocOwner() || isAdmin());
+    }
+
+    match /communityPosts/{postId} {
+      allow get: if isValidId(postId) && resource.data.isPublished == true;
+      allow list: if resource.data.isPublished == true;
+      allow create: if isSignedIn() && isVerified() && isValidId(postId)
+        && isValidCommunityPost(incoming())
+        && incoming().authorId == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isSignedIn() && isVerified() && isValidId(postId)
+        && isValidCommunityPost(incoming())
+        && (isDocOwner() || isAdmin())
+        && incoming().authorId == existing().authorId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && affectedKeys().hasOnly(['category', 'title', 'content', 'updatedAt']);
+      allow delete: if isSignedIn() && isVerified() && isValidId(postId) && (isDocOwner() || isAdmin());
+
+      match /comments/{commentId} {
+        allow get: if isValidId(postId) && isValidId(commentId) && resource.data.isPublished == true;
+        allow list: if resource.data.isPublished == true;
+        allow create: if isSignedIn() && isVerified() && isValidId(postId) && isValidId(commentId)
+          && isValidComment(incoming(), postId)
+          && incoming().createdAt == request.time
+          && exists(/databases/$(database)/documents/communityPosts/$(postId));
+        allow update: if false;
+        allow delete: if isSignedIn() && isVerified() && isValidId(postId) && isValidId(commentId) && (isDocOwner() || isAdmin());
+      }
+    }
+
+    match /bookmarks/{bookmarkId} {
+      allow get: if isSignedIn() && isValidId(bookmarkId) && resource.data.userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isVerified() && isValidId(bookmarkId)
+        && isValidBookmark(incoming())
+        && bookmarkId == (request.auth.uid + '_' + incoming().contestId)
+        && incoming().createdAt == request.time
+        && exists(/databases/$(database)/documents/contests/$(incoming().contestId));
+      allow update: if false;
+      allow delete: if isSignedIn() && isVerified() && isValidId(bookmarkId) && resource.data.userId == request.auth.uid;
+    }
+
+    match /departmentNews/{newsId} {
+      allow get: if isValidId(newsId) && resource.data.isPublished == true;
+      allow list: if resource.data.isPublished == true;
+      allow create: if isSignedIn() && isVerified() && isValidId(newsId)
+        && isValidDepartmentNews(incoming())
+        && incoming().authorId == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isSignedIn() && isVerified() && isValidId(newsId)
+        && isValidDepartmentNews(incoming())
+        && (isDocOwner() || isAdmin())
+        && incoming().authorId == existing().authorId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && affectedKeys().hasOnly(['newsType', 'title', 'summary', 'content', 'eventSchedule', 'source', 'isPinned', 'updatedAt']);
+      allow delete: if isSignedIn() && isVerified() && isValidId(newsId) && (isDocOwner() || isAdmin());
+    }
+
+    match /reports/{reportId} {
+      allow get: if isSignedIn() && isValidId(reportId) && (resource.data.reporterId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.reporterId == request.auth.uid || isBootstrappedAdmin());
+      allow create: if isSignedIn() && isVerified() && isValidId(reportId)
+        && isValidReport(incoming())
+        && incoming().reporterId == request.auth.uid
+        && incoming().status == '접수됨'
+        && incoming().adminNote == ''
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && reportId == (request.auth.uid + '_' + incoming().targetType + '_' + incoming().targetId)
+        && (
+          (incoming().targetType == 'post'
+            && incoming().targetCollection == 'communityPosts'
+            && incoming().parentId == ''
+            && exists(/databases/$(database)/documents/communityPosts/$(incoming().targetId)))
+          ||
+          (incoming().targetType == 'comment'
+            && incoming().parentId != ''
+            && (
+              (incoming().targetCollection == 'communityPosts'
+                && exists(/databases/$(database)/documents/communityPosts/$(incoming().parentId)/comments/$(incoming().targetId)))
+              ||
+              (incoming().targetCollection == 'clubs'
+                && exists(/databases/$(database)/documents/clubs/$(incoming().parentId)/comments/$(incoming().targetId)))
+              ||
+              (incoming().targetCollection == 'teamRecruits'
+                && exists(/databases/$(database)/documents/teamRecruits/$(incoming().parentId)/comments/$(incoming().targetId)))
+              ||
+              (incoming().targetCollection == 'portfolioWorks'
+                && exists(/databases/$(database)/documents/portfolioWorks/$(incoming().parentId)/comments/$(incoming().targetId)))
+            ))
+        );
+      allow update: if isSignedIn() && isVerified() && isValidId(reportId)
+        && isValidReport(incoming())
+        && isAdmin()
+        && incoming().reporterId == existing().reporterId
+        && incoming().reporterName == existing().reporterName
+        && incoming().targetType == existing().targetType
+        && incoming().targetCollection == existing().targetCollection
+        && incoming().targetId == existing().targetId
+        && incoming().parentId == existing().parentId
+        && incoming().targetAuthorId == existing().targetAuthorId
+        && incoming().targetAuthorName == existing().targetAuthorName
+        && incoming().targetPreview == existing().targetPreview
+        && incoming().reason == existing().reason
+        && incoming().reasonDetail == existing().reasonDetail
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && affectedKeys().hasOnly(['status', 'adminNote', 'updatedAt']);
+      allow delete: if isAdmin() && isValidId(reportId);
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "FRAME — 콘텐츠제작학과 캠퍼스 아카이브",
+  "description": "콘텐츠제작학과 대학생을 위한 교내·외 공모전 홍보, 동아리 모집, 전공 스터디·팀빌딩·장비 위키·포트폴리오 피드백 및 커뮤니티 플랫폼",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
